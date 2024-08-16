@@ -41,7 +41,8 @@ public class HttpClientUtils {
     private static String encoding = StandardCharsets.UTF_8.name();
     private static final ScheduledExecutorService scheduledService = Executors.newScheduledThreadPool(2);
     private static final String header = "\n" +
-            "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhNmYzNjU3OS0yYzZhLTQyYTYtOGVjMi1kNzc2ODU2ZjhjMzEiLCJpYXQiOjE3MjM3OTk4OTUsImV4cCI6MTcyMzgwMzQ5NX0.TzY_uNpFHv7D-sI0u01aESpvkacpl6oQOkE1-pO9Zici9TyIAtCE7tPYIh6tKLd0TjJhtoNZoq_kCNF_FDyFmw";
+            "\n" +
+            "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiI2MjliNTA0ZC0wZGUyLTQ2NzgtYjY2MS01OTUyNGZjMzhjODQiLCJpYXQiOjE3MjM4MDg2MjYsImV4cCI6MTcyMzgxMjIyNn0.p63bmDRgqOUZNPDtuxuAaODRigiOLAd1sul9hj9lTON2uXHUYgxfLaH-uNhd3hZwwu-pcrk_FQtnMlO1wN7gsg";
 
     // 静态代码块，用于初始化 HttpClient 和连接管理器，并设置 JVM 退出时关闭 HttpClient
     static {

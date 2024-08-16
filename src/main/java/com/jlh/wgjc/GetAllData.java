@@ -68,6 +68,9 @@ public class GetAllData {
                     for (Object datum : secData) {
                         JSONObject object = (JSONObject) datum;
                         Integer isShowValue = object.getInteger("isShowValue");
+                        if(Objects.isNull(isShowValue)) {
+                            continue;
+                        }
                         String dictName = object.getString("dictName");
                         if(StringUtils.endsWith(dictName, "*")) {
                             continue;
@@ -89,6 +92,8 @@ public class GetAllData {
                             secAreaData.setDictUnit(dictUnit);
                             if(!CollectionUtils.isEmpty(statDate)) {
                                 secAreaData.setStatDate(statDate.getString(0));
+                            } else {
+                                continue;
                             }
 
                             searcHead.add(secAreaData);
@@ -115,6 +120,8 @@ public class GetAllData {
                                     secAreaData.setDictUnit(unit);
                                     if(!CollectionUtils.isEmpty(chilDate)) {
                                         secAreaData.setStatDate(chilDate.getString(0));
+                                    } else {
+                                        continue;
                                     }
                                     searcHead.add(secAreaData);
                                     thirdHead.add(secAreaData);
@@ -150,7 +157,7 @@ public class GetAllData {
 
         }
         try {
-            FileWriter writer = new FileWriter("/home/langchao/"+ System.currentTimeMillis() + "filename.txt");
+            FileWriter writer = new FileWriter("E:\\data\\"+ System.currentTimeMillis() + "filename.txt");
             writer.write(JSON.toJSONString(list));
             writer.close();
             System.out.println("文件写入成功！");
@@ -158,7 +165,10 @@ public class GetAllData {
             System.out.println("文件写入失败：" + e.getMessage());
         }
 
-        String fileName = "/home/langchao/dynamicHeadWrite" + System.currentTimeMillis() + ".xlsx";
+        Calendar calendar = Calendar.getInstance();
+        int month = calendar.get(Calendar.MONTH) + 1;
+
+        String fileName = "E:\\data\\无感检测" + month + "月数据.xlsx";
         EasyExcel.write(fileName)
                 // 这里放入动态头
                 .head(head(searcHead)).sheet("模板")
@@ -177,11 +187,24 @@ public class GetAllData {
             return Collections.EMPTY_LIST;
         }
         List<List<String>> list = new ArrayList<List<String>>();
+        List<String> first = new ArrayList<String>();
+        List<String> secord = new ArrayList<String>();
+        first.add("区域");
+        secord.add("县（市、区）");
+        list.add(first);
+        list.add(secord);
         for (AreaData areaData : searcHead) {
             List<String> head0 = new ArrayList<String>();
             head0.add(areaData.getPName());
-            head0.add(areaData.getSecName() + "（" + areaData.getDictUnit() + "）" + "（ " + areaData.getStatDate() + " ）");
-            head0.add(areaData.getThirdName());
+            String thirdName = areaData.getThirdName();
+            if(StringUtils.equals(thirdName, "/")) {
+                head0.add(areaData.getSecName() + "（" + areaData.getDictUnit() + "）" + "（ " + areaData.getStatDate() + " ）");
+                head0.add(areaData.getThirdName());
+            } else {
+                head0.add(areaData.getSecName() );
+                head0.add(areaData.getThirdName() + "（" + areaData.getDictUnit() + "）" + "（ " + areaData.getStatDate() + " ）");
+            }
+
             list.add(head0);
         }
         return list;
@@ -235,8 +258,8 @@ public class GetAllData {
                     if(StringUtils.equals(code, "330300")) {
                         City wzCity = new City();
                         wzCity.setPreName(xList.getString(0));
-                        wzCity.setName(xList.getString(i));
-                        wzCity.setValue(yList.getDoubleValue(i));
+                        wzCity.setName(xList.getString(j));
+                        wzCity.setValue(yList.getDoubleValue(j));
                         wzCitys.add(city);
                     }
                 }
@@ -249,8 +272,8 @@ public class GetAllData {
                     if(!CollectionUtils.isEmpty(other)){
                         Map<String, Double> map = allCity.stream().collect(Collectors.toMap(City::getName, City::getValue));
                         System.out.println("没有数据的城市:" + other);
+                        List<String> resultList = new ArrayList<>();
                         for (String cityName : areaList) {
-                            List<String> resultList = new ArrayList<>();
                             if(list.contains(cityName)) {
                                 Double data = map.get(cityName);
                                 resultList.add(String.valueOf(data));
@@ -261,6 +284,7 @@ public class GetAllData {
                             }
 
                         }
+                        all.add(resultList);
                     } else {
                         List<String> resultList = new ArrayList<>();
                         for (City city : allCity) {
