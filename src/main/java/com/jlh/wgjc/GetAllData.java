@@ -89,7 +89,6 @@ public class GetAllData {
                             secAreaData.setDictCode(dictCode);
                             String unit = StringUtils.isNotBlank(dictUnit) ? dictUnit : "%";
                             secAreaData.setDictUnit(unit);
-                            secAreaData.setDictUnit(dictUnit);
                             if(!CollectionUtils.isEmpty(statDate)) {
                                 secAreaData.setStatDate(statDate.getString(0));
                             } else {
