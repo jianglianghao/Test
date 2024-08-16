@@ -1,96 +1,169 @@
-package com.rafgj.easypoi;
+package com.jlh.wgjc;
 
-import cn.afterturn.easypoi.excel.annotation.Excel;
 import com.alibaba.excel.EasyExcel;
-import com.alibaba.excel.ExcelWriter;
-import com.alibaba.excel.annotation.ExcelProperty;
-import com.alibaba.excel.write.metadata.WriteSheet;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.google.common.collect.Lists;
-import com.jlh.wgjc.model.ExcelHead;
-import com.jlh.wgjc.model.TestHead;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.ToString;
-import org.junit.Test;
+import com.jlh.wgjc.model.AreaData;
+import com.rafgj.easypoi.City;
+import com.rafgj.easypoi.HttpClientUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.http.NameValuePair;
+import org.apache.http.message.BasicNameValuePair;
+import org.checkerframework.checker.units.qual.A;
+import org.springframework.util.CollectionUtils;
 
-import java.io.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.*;
 import java.util.stream.Collectors;
 
-@Getter
-@Setter
-@EqualsAndHashCode
-@ToString
-public class AlExcel implements Cloneable{
-
-    @Test
-    public void complexHeadWrite() {
-
-        List<Demo> list = new ArrayList<>();
-        for (int i = 0; i < 5; i++) {
-            Demo demo =new Demo();
-            demo.setAge(i +10);
-            demo.setMoney(10);
-            demo.setName("jlh");
-            demo.setNum(i + 1);
-            demo.setDept("tg");
-            list.add(demo);
-        }
-        String fileName = "/home/langchao/dynamicHeadWrite" + System.currentTimeMillis() + ".xlsx";
-        // 这里 需要指定写用哪个class去写，然后写到第一个sheet，名字为模板 然后文件流会自动关闭
-        EasyExcel.write(fileName, TestHead.class).sheet("模板").doWrite(list);
-    }
-
-    @Test
-    public void data() throws IOException {
-        File file = new File("/home/langchao/data.json");
-        FileInputStream fis = new FileInputStream(file);
-        //创建FileInputStream对象
-
-        //创建BufferedInputStream对象
-        BufferedInputStream bufferedInputStream = new BufferedInputStream(fis);
-
-        //通过read方法读取文件内容
-        byte[] b =new byte[1024];
-        int i =0;
-        StringBuffer sb =new StringBuffer();
-        while((i=bufferedInputStream.read(b))!=-1) {
-            sb.append(new String(b,0,i));
-        }
-        System.out.println(sb);
-        JSONArray objects = JSON.parseArray(sb.toString());
+public class GetAllData {
 
 
-//        JSONArray objects = get();
-        String fileName = "/home/langchao/措施" + System.currentTimeMillis() + ".xlsx";
-        EasyExcel.write(fileName)
-               // 这里放入动态头
-               .head(headString()).sheet("模板")
-               // 当然这里数据也可以用 List<List<String>> 去传入
-                .doWrite(objects);
-    }
+    public static void main(String[] args) {
+        String url = "https://dgov-integrate-task.zj.gov.cn/yshjapi/wgjcScore/threeSectionsByArea?areaCode=330381&year=2024";
+//        List<NameValuePair> params = new ArrayList<>();
+//        params.add(new BasicNameValuePair("areaCode", "330381"));
+//        params.add(new BasicNameValuePair("year", "2024"));
+        String result = HttpClientUtils.get(url, new ArrayList<>());
+        JSONObject jsonObject = JSON.parseObject(result);
+        JSONArray data = jsonObject.getJSONArray("data");
+        List<AreaData> firstHead = new ArrayList<>();
+        List<AreaData> secHead = new ArrayList<>();
+        List<AreaData> thirdHead = new ArrayList<>();
+        List<AreaData> searcHead = new ArrayList<>();
+        if(!CollectionUtils.isEmpty(data)) {
+            for (Object datum : data) {
+                JSONObject object = (JSONObject) datum;
+                String dictName = object.getString("dictName");
+                String dictCode = object.getString("dictCode");
+                String[] dictNames = dictName.split("、");
+                String[] dictCodes = dictCode.split("、");
+                if(dictNames != null && dictNames.length > 0) {
+                    for (int i = 0; i < dictNames.length; i++) {
+                        String name = dictNames[i];
+                        String code = dictCodes[i];
+                        AreaData areaData = new AreaData();
+                        areaData.setDictName(name);
+                        areaData.setDictCode(code);
+                        firstHead.add(areaData);
+                    }
+                }
 
-    public List<List<String>> headString() {
-        String head = "[[\"办理建筑许可\",\"办理建筑许可时间（天）（ 2024-07 ）\",\"/\"],[\"办理建筑许可\",\"办理建筑许可手续（个）（ 2024-07 ）\",\"/\"],[\"开办企业\",\"开办企业时间（天）（ 2024-07 ）\",\"/\"],[\"开办企业\",\"开办企业手续（个）（ 2024-07 ）\",\"/\"],[\"获得电力\",\"获得电力时间（天）（ 2024-06 ）\",\"/\"],[\"获得电力\",\"获得电力手续（个）（ 2024-06 ）\",\"/\"],[\"获得用水用气\",\"获得用水办理时间（天）（ 2024-07 ）\",\"/\"],[\"获得用水用气\",\"获得用水办理手续（个）（ 2024-07 ）\",\"/\"],[\"登记财产\",\"登记财产时间（天）（ 2024-07 ）\",\"/\"],[\"登记财产\",\"登记财产手续（个）（ 2024-07 ）\",\"/\"],[\"纳税\",\"网上综合办税率（%）（ 2024-03 ）\",\"/\"],[\"纳税\",\"总税收和缴费率（占利润百分比）（%）（ null ）\",\"/\"],[\"纳税\",\"报税后流程指数（）（ 2024-03 ）\",\"/\"],[\"多元解纷\",\"解决商业纠纷的时间（天）（ 2024-06 ）\",\"审理时间\"],[\"多元解纷\",\"解决商业纠纷的时间（天）（ 2024-06 ）\",\"执行时间\"],[\"多元解纷\",\"实际执结率（%）（ 2024-06 ）\",\"/\"],[\"多元解纷\",\"诉前化解率（%）（ 2024-06 ）\",\"/\"],[\"多元解纷\",\"程序比（%）（ 2024-06 ）\",\"/\"],[\"多元解纷\",\"信访涉商事纠纷初次化解率（%）（ 2024-01 ）\",\"/\"],[\"注销企业\",\"注销企业时间（天）（ 2024-07 ）\",\"/\"],[\"注销企业\",\"注销企业手续（个）（ 2024-07 ）\",\"/\"],[\"政府采购\",\"政府采购信息化程度指数（%）（ 2024-06 ）\",\"全程无纸化投标（响应）项目数占比\"],[\"政府采购\",\"采购履约保障程度（%）（ 2024-06 ）\",\"中小企业中标（成交）项目金额占比\"],[\"政府采购\",\"采购履约保障程度（%）（ 2024-06 ）\",\"合同预付款平均比例\"],[\"政府采购\",\"采购履约保障程度（%）（ 2024-06 ）\",\"履约保证金平均比例\"],[\"政府采购\",\"采购履约保障程度（天）（ 2024-06 ）\",\"采购结果公告平均时长\"],[\"招标投标\",\"招投标信息化程度指数（%）（ 2024-06 ）\",\"交易数据完整率\"],[\"招标投标\",\"招投标信息化程度指数（%）（ 2024-06 ）\",\"全省统一招标投标系统应用率\"],[\"招标投标\",\"招投标信息化程度指数（%）（ 2024-06 ）\",\"远程异地多点评标应用率\"],[\"招标投标\",\"招投标信息化程度指数（%）（ 2024-06 ）\",\"数字保函应用率\"],[\"招标投标\",\"交易履约保障程度（天）（ 2024-06 ）\",\"交易效率\"],[\"招标投标\",\"交易履约保障程度（%）（ 2024-06 ）\",\"合同信息公开率\"],[\"招标投标\",\"外地企业权益保护（%）（ 2024-06 ）\",\"CA互认应用率\"],[\"招标投标\",\"外地企业权益保护（%）（ 2024-06 ）\",\"评标专家依法抽取率\"],[\"招标投标\",\"外地企业权益保护（%）（ 2024-06 ）\",\"外地企业中标率\"],[\"信用体系和信用监管\",\"政务诚信度（%）（ 2024-06 ）\",\"地方政府公共信用指数\"],[\"信用体系和信用监管\",\"企业诚信度（%）（ 2024-06 ）\",\"企业公共信用评价优良率\"],[\"信用体系和信用监管\",\"企业诚信度（%）（ 2024-06 ）\",\"企业公共信用评价不良率\"],[\"市场监管\",\"“双随机、一公开”落地率（%）（ 2024-06 ）\",\"“双随机、一公开” 抽查占比\"],[\"市场监管\",\"“双随机、一公开”落地率（%）（ 2024-06 ）\",\"“双随机、一公开”抽查事项覆盖率\"],[\"市场监管\",\"“双随机、一公开”落地率（%）（ 2024-06 ）\",\"跨部门联合双随机监管率\"],[\"公共服务\",\"生态环境指数（微克/立方米）（ 2024-06 ）\",\"细颗粒物浓度（PM2.5）\"],[\"公共服务\",\"生态环境指数（%）（ 2024-06 ）\",\"空气质量优良率\"],[\"公共服务\",\"生态环境指数（%）（ 2024-06 ）\",\"省控断面三类及以上水质优良率\"],[\"公共服务\",\"生态环境指数（%）（ 2024-06 ）\",\"工业危险废物处置率\"],[\"公共服务\",\"综合立体交通指数（%）（ 2024-06 ）\",\"市（县）内二级及以上公路里程占比增长数\"],[\"公共服务\",\"民营企业营收成本（%）（ 2024-05 ）\",\"民营规上工业企业每百元营业收入成本\"],[\"知识产权活力\",\"申报质量（个/每万人）（ 2024-05 ）\",\"发明专利授权量\"],[\"知识产权活力\",\"申报质量（个）（ 2024-05 ）\",\"每万人有效发明专利拥有量\"],[\"知识产权活力\",\"申报质量（%）（ 2024-05 ）\",\"有效发明专利拥有量增幅\"],[\"知识产权活力\",\"保护水平（家）（ 2024-03 ）\",\"调解机构数\"],[\"知识产权活力\",\"保护水平（%）（ 2024-02 ）\",\"行政处罚案件公开数占结案数百分比\"],[\"市场开放\",\"双创整体活跃度（%）（ 2024-01 ）\",\"省级科技型中小企业数增长率\"],[\"市场开放\",\"双创整体活跃度（%）（ null ）\",\"新登记市场主体数量增长率\"],[\"市场开放\",\"双创整体活跃度（%）（ null ）\",\"R&D 占 GDP 比重（观察）\"],[\"市场开放\",\"人才流动活跃度（%）（ 2024-01 ）\",\"企业研发机构强度指数\"],[\"市场开放\",\"人才流动活跃度（%）（ 2024-06 ）\",\"博士后工作站招收设站比\"],[\"市场开放\",\"人才流动活跃度（%）（ null ）\",\"院士工作站（观察）\"],[\"市场开放\",\"人才流动活跃度（%）（ null ）\",\"技能人才占就业人员比重（观察）\"],[\"市场开放\",\"人才流动活跃度（%）（ 2024-06 ）\",\"劳动人事争议调解成功率\"],[\"市场开放\",\"人才流动活跃度（%）（ 2024-06 ）\",\"人力资源服务机构发展指数\"]]";
-        JSONArray objects = JSON.parseArray(head);
-        List<List<String>> head2 = new ArrayList<>();
-        for (Object object : objects) {
-            JSONArray object1 = (JSONArray) object;
-            List<String> a = new ArrayList<>();
-            for (Object o : object1) {
-                a.add(String.valueOf(o));
             }
-            head2.add(a);
+        }
+
+        if(!CollectionUtils.isEmpty(firstHead)) {
+            String secUrl = "https://dgov-integrate-task.zj.gov.cn/yshjapi/wgjc/getQuotaByCode";
+            for (AreaData areaData : firstHead) {
+                List<NameValuePair> nameValuePairs = new ArrayList<>();
+                nameValuePairs.add(new BasicNameValuePair("code", areaData.getDictCode()));
+                nameValuePairs.add(new BasicNameValuePair("year", "2024"));
+                String secResult = HttpClientUtils.post(secUrl, nameValuePairs);
+                JSONObject secJson = JSON.parseObject(secResult);
+                JSONArray secData = secJson.getJSONArray("data");
+                if(!CollectionUtils.isEmpty(secData)) {
+                    for (Object datum : secData) {
+                        JSONObject object = (JSONObject) datum;
+                        Integer isShowValue = object.getInteger("isShowValue");
+                        String dictName = object.getString("dictName");
+                        if(StringUtils.endsWith(dictName, "*")) {
+                            continue;
+                        }
+                        String dictCode = object.getString("dictCode");
+                        String dictUnit = object.getString("dictUnit");
+                        JSONArray statDate = object.getJSONArray("statDate");
+                        if (isShowValue == 1 && !StringUtils.equals(dictCode, "2024_W3300000301")) {
+
+                            AreaData secAreaData = new AreaData();
+                            secAreaData.setPCode(areaData.getDictCode());
+                            secAreaData.setPName(areaData.getDictName());
+                            secAreaData.setSecName(dictName);
+                            secAreaData.setThirdName("/");
+                            secAreaData.setDictName(dictName);
+                            secAreaData.setDictCode(dictCode);
+                            String unit = StringUtils.isNotBlank(dictUnit) ? dictUnit : "%";
+                            secAreaData.setDictUnit(unit);
+                            secAreaData.setDictUnit(dictUnit);
+                            if(!CollectionUtils.isEmpty(statDate)) {
+                                secAreaData.setStatDate(statDate.getString(0));
+                            }
+
+                            searcHead.add(secAreaData);
+                            secHead.add(secAreaData);
+                        } else {
+                            JSONArray children = object.getJSONArray("children");
+                            if(!CollectionUtils.isEmpty(children)) {
+                                for (Object child : children) {
+                                    JSONObject childObject = (JSONObject) child;
+                                    String chilName = childObject.getString("dictName");
+                                    if(StringUtils.endsWith(chilName, "*")) {
+                                        continue;
+                                    }
+                                    String chilCode = childObject.getString("dictCode");
+                                    String chilUnit = childObject.getString("dictUnit");
+                                    JSONArray chilDate = childObject.getJSONArray("statDate");
+                                    AreaData secAreaData = new AreaData();
+                                    secAreaData.setPCode(areaData.getDictCode());
+                                    secAreaData.setPName(areaData.getDictName());
+                                    secAreaData.setSecName(dictName);
+                                    secAreaData.setThirdName(chilName);
+                                    secAreaData.setDictCode(chilCode);
+                                    String unit = StringUtils.isNotBlank(chilUnit) ? chilUnit : "%";
+                                    secAreaData.setDictUnit(unit);
+                                    if(!CollectionUtils.isEmpty(chilDate)) {
+                                        secAreaData.setStatDate(chilDate.getString(0));
+                                    }
+                                    searcHead.add(secAreaData);
+                                    thirdHead.add(secAreaData);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
         }
-        return head2;
+        List<List<String>> nodeData = getNodeData(searcHead);
+        complexHeadWrite(nodeData, searcHead);
+        System.out.println(nodeData);
+    }
+
+    public static void complexHeadWrite(List<List<String>> nodeData, List<AreaData> searcHead) {
+        if(CollectionUtils.isEmpty(nodeData)) {
+            return ;
+        }
+        List<List<String>> lineHead = getLineHead();
+        nodeData.add(0, lineHead.get(0));
+        nodeData.add(1, lineHead.get(1));
+        List<List<String>> list = new ArrayList<>();
+        for (int i = 0; i < 90; i++) {
+            List<String> a = new ArrayList<>();
+            for (int j = 0; j < nodeData.size(); j++) {
+                List<String> data = nodeData.get(j);
+                String result = data.get(i);
+                a.add(result);
+            }
+            list.add(a);
+
+        }
+        try {
+            FileWriter writer = new FileWriter("/home/langchao/"+ System.currentTimeMillis() + "filename.txt");
+            writer.write(JSON.toJSONString(list));
+            writer.close();
+            System.out.println("文件写入成功！");
+        } catch (IOException e) {
+            System.out.println("文件写入失败：" + e.getMessage());
+        }
+
+        String fileName = "/home/langchao/dynamicHeadWrite" + System.currentTimeMillis() + ".xlsx";
+        EasyExcel.write(fileName)
+                // 这里放入动态头
+                .head(head(searcHead)).sheet("模板")
+                // 当然这里数据也可以用 List<List<String>> 去传入
+                .doWrite(list);
     }
 
 //    private JSONArray get() {
@@ -99,103 +172,333 @@ public class AlExcel implements Cloneable{
 //        return objects;
 //    }
 
-    @Test
-    public void dynamicHeadWrite() {
-        List<List<String>> list = new ArrayList<>();
-        for (int i = 0; i < 5; i++) {
-            List<String> a = new ArrayList<>();
-            a.add("1" +i);
-            a.add("2"+i);
-            a.add("3"+i);
-            a.add("4"+i);
-            a.add("5"+i);
-            list.add(a);
+    private static List<List<String>> head(List<AreaData> searcHead) {
+        if(CollectionUtils.isEmpty(searcHead)) {
+            return Collections.EMPTY_LIST;
         }
-
-        String fileName = "/home/langchao/措施" + System.currentTimeMillis() + ".xlsx";
-        EasyExcel.write(fileName)
-                // 这里放入动态头
-                .head(head()).sheet("模板")
-                // 当然这里数据也可以用 List<List<String>> 去传入
-                .doWrite(list);
-    }
-
-    private List<List<String>> head() {
         List<List<String>> list = new ArrayList<List<String>>();
-        List<String> head0 = new ArrayList<String>();
-        head0.add("序号");
-        List<String> head1 = new ArrayList<String>();
-        head1.add("基本信息");
-        head1.add("姓名");
-        List<String> head1_1 = new ArrayList<String>();
-        head1_1.add("基本信息");
-        head1_1.add("年龄");
-        List<String> head2 = new ArrayList<String>();
-        head2.add("工龄");
-        List<String> head3 = new ArrayList<String>();
-        head3.add("工资");
-        list.add(head0);
-        list.add(head1);
-        list.add(head1_1);
-        list.add(head2);
-        list.add(head3);
+        for (AreaData areaData : searcHead) {
+            List<String> head0 = new ArrayList<String>();
+            head0.add(areaData.getPName());
+            head0.add(areaData.getSecName() + "（" + areaData.getDictUnit() + "）" + "（ " + areaData.getStatDate() + " ）");
+            head0.add(areaData.getThirdName());
+            list.add(head0);
+        }
         return list;
     }
 
 
-    @Test
-    public void test() {
-        String filePath = "D:\\code\\Excel\\表1.xls";
-        List<Demo1> list1 = EasyExcel.read(filePath).head(Demo1.class).sheet(0).doReadSync();
-        List<Demo2> list2 = EasyExcel.read(filePath).head(Demo2.class).sheet(1).doReadSync();
-        System.out.println(list1);
-        System.out.println(list2);
-        List<Demo> list = new ArrayList<>();
-        Map<String, Integer> map = list2.stream().collect(Collectors.toMap(Demo2::getName, Demo2::getMoney));
-        for (Demo1 demo1 : list1) {
-            String name = demo1.getName();
-            Integer money = map.get(name);
-            Demo demo = new Demo();
-            demo.setAge(demo1.getAge());
-            demo.setDept(demo1.getDept());
-            demo.setNum(demo1.getNum());
-            demo.setName(demo1.getName());
-            demo.setMoney(money);
-            list.add(demo);
+    private static List<List<String>> getNodeData(List<AreaData> dataList) {
+        if(CollectionUtils.isEmpty(dataList)) {
+            return Collections.EMPTY_LIST;
         }
-        //表头
-        List<List<String>> headList = new ArrayList<>();
-        headList.add(Lists.newArrayList("序号"));
-        headList.add(Lists.newArrayList("姓名"));
-        headList.add(Lists.newArrayList("部门"));
-        headList.add(Lists.newArrayList("工龄"));
-        headList.add(Lists.newArrayList("工资"));
+        String area = "上城区、拱墅区、西湖区、滨江区、萧山区、余杭区、临平区、钱塘区、富阳区、临安区、桐庐县、淳安县、建德市、海曙区、江北区、北仑区、镇海区、鄞州区、奉化区、象山县、宁海县、余姚市、慈溪市、鹿城区、龙湾区、瓯海区、洞头区、永嘉县、平阳县、苍南县、文成县、泰顺县、瑞安市、乐清市、龙港市、南湖区、秀洲区、嘉善县、海盐县、海宁市、平湖市、桐乡市、吴兴区、南浔区、德清县、长兴县、安吉县、越城区、柯桥区、上虞区、新昌县、诸暨市、嵊州市、婺城区、金东区、武义县、浦江县、磐安县、兰溪市、义乌市、东阳市、永康市、柯城区、衢江区、常山县、开化县、龙游县、江山市、定海区、普陀区、岱山县、嵊泗县、椒江区、黄岩区、路桥区、三门县、天台县、仙居县、温岭市、临海市、玉环市、莲都区、青田县、缙云县、遂昌县、松阳县、云和县、庆元县、景宁县、龙泉市";
+        List<String> areaList = Arrays.asList(area.split("、"));
+        List<String> codes = Lists.newArrayList("330100","330200","330300","330400","330500","330600","330700","330800","330900","331000","331100");
 
-        List<List<String>> headList1 = new ArrayList<>();
-        headList1.add(Lists.newArrayList("序号"));
-        headList1.add(Lists.newArrayList("姓名"));
-        headList1.add(Lists.newArrayList("部门"));
-        headList1.add(Lists.newArrayList("工龄"));
+        String url = "https://dgov-integrate-task.zj.gov.cn/yshjapi/wgjc/quotaValue";
 
-        List<List<String>> headList2 = new ArrayList<>();
-        headList2.add(Lists.newArrayList("序号"));
-        headList2.add(Lists.newArrayList("姓名"));
-        headList2.add(Lists.newArrayList("工资"));
+        List<List<String>> all = new ArrayList<>();
 
-//        EasyExcel.write("D:\\code\\Excel\\表5.xls").head(headList).sheet("用户信息").sheetNo(0).doWrite(list1);
-        ExcelWriter build = EasyExcel.write("D:\\code\\Excel\\表7.xls").build();
-        WriteSheet sheet = EasyExcel.writerSheet(0, "结果表").head(headList).build();
-        WriteSheet sheet1 = EasyExcel.writerSheet(1, "表1").head(headList1).build();
-        WriteSheet sheet2 = EasyExcel.writerSheet(2, "表2").head(headList2).build();
-        build.write(list, sheet);
-        build.write(list1, sheet1);
-        build.write(list2, sheet2).finish();
+        for (AreaData areaData : dataList) {
+            List<City> allCity = new ArrayList<>();
+            List<City> wzCitys = new ArrayList<>();
+            for (int i = 0; i < codes.size(); i++) {
+                String code = codes.get(i);
+
+                List<NameValuePair> params = new ArrayList<>();
+                params.add(new BasicNameValuePair("areaCode", code));
+                params.add(new BasicNameValuePair("code", areaData.getDictCode()));
+                params.add(new BasicNameValuePair("statDate", areaData.getStatDate()));
+                params.add(new BasicNameValuePair("type", "1"));
+                params.add(new BasicNameValuePair("tag", "1"));
+
+                String result = HttpClientUtils.post(url, params);
+
+                JSONObject jsonObject = JSON.parseObject(result);
+                JSONObject data = jsonObject.getJSONObject("data");
+                if(Objects.isNull(data)) {
+                    continue;
+                }
+                JSONArray xList = data.getJSONArray("xList");
+                JSONArray yList = data.getJSONArray("yList");
+                if(xList == null || yList == null) {
+                    continue;
+                }
+
+                for (int j = 1; j < xList.size(); j++) {
+                    City city = new City();
+                    city.setPreName(xList.getString(0));
+                    city.setName(xList.getString(j));
+                    city.setValue(yList.getDoubleValue(j));
+                    allCity.add(city);
+                    if(StringUtils.equals(code, "330300")) {
+                        City wzCity = new City();
+                        wzCity.setPreName(xList.getString(0));
+                        wzCity.setName(xList.getString(i));
+                        wzCity.setValue(yList.getDoubleValue(i));
+                        wzCitys.add(city);
+                    }
+                }
+            }
+
+
+                if(!CollectionUtils.isEmpty(allCity)) {
+                    List<String> list = allCity.stream().map(City::getName).collect(Collectors.toList());
+                    List<String> other = areaList.stream().filter(areas -> !list.contains(areas)).collect(Collectors.toList());
+                    if(!CollectionUtils.isEmpty(other)){
+                        Map<String, Double> map = allCity.stream().collect(Collectors.toMap(City::getName, City::getValue));
+                        System.out.println("没有数据的城市:" + other);
+                        for (String cityName : areaList) {
+                            List<String> resultList = new ArrayList<>();
+                            if(list.contains(cityName)) {
+                                Double data = map.get(cityName);
+                                resultList.add(String.valueOf(data));
+                                System.out.println(data);
+                            }else {
+                                resultList.add("无数据");
+                                System.out.println("无数据");
+                            }
+
+                        }
+                    } else {
+                        List<String> resultList = new ArrayList<>();
+                        for (City city : allCity) {
+
+//                    System.out.println(city.getPreName() + "\t"  + city.getName() + "\t" + city.getValue());
+                            resultList.add(String.valueOf(city.getValue()));
+
+                            System.out.println(city.getValue());
+                        }
+                        all.add(resultList);
+                    }
+
+
+                }
+
+
+        }
+
+
+        return all;
     }
 
-    public static void main(String[] args) throws CloneNotSupportedException {
 
+    private static List<List<String>> getLineHead() {
+        List<List<String>> data = new ArrayList<>();
+        List<String> line1 = new ArrayList<>();
+        line1.add("杭州市");
+        line1.add("杭州市");
+        line1.add("杭州市");
+        line1.add("杭州市");
+        line1.add("杭州市");
+        line1.add("杭州市");
+        line1.add("杭州市");
+        line1.add("杭州市");
+        line1.add("杭州市");
+        line1.add("杭州市");
+        line1.add("杭州市");
+        line1.add("杭州市");
+        line1.add("杭州市");
+        line1.add("宁波市");
+        line1.add("宁波市");
+        line1.add("宁波市");
+        line1.add("宁波市");
+        line1.add("宁波市");
+        line1.add("宁波市");
+        line1.add("宁波市");
+        line1.add("宁波市");
+        line1.add("宁波市");
+        line1.add("宁波市");
+        line1.add("温州市");
+        line1.add("温州市");
+        line1.add("温州市");
+        line1.add("温州市");
+        line1.add("温州市");
+        line1.add("温州市");
+        line1.add("温州市");
+        line1.add("温州市");
+        line1.add("温州市");
+        line1.add("温州市");
+        line1.add("温州市");
+        line1.add("温州市");
+        line1.add("嘉兴市");
+        line1.add("嘉兴市");
+        line1.add("嘉兴市");
+        line1.add("嘉兴市");
+        line1.add("嘉兴市");
+        line1.add("嘉兴市");
+        line1.add("嘉兴市");
+        line1.add("湖州市");
+        line1.add("湖州市");
+        line1.add("湖州市");
+        line1.add("湖州市");
+        line1.add("湖州市");
+        line1.add("绍兴市");
+        line1.add("绍兴市");
+        line1.add("绍兴市");
+        line1.add("绍兴市");
+        line1.add("绍兴市");
+        line1.add("绍兴市");
+        line1.add("金华市");
+        line1.add("金华市");
+        line1.add("金华市");
+        line1.add("金华市");
+        line1.add("金华市");
+        line1.add("金华市");
+        line1.add("金华市");
+        line1.add("金华市");
+        line1.add("金华市");
+        line1.add("衢州市");
+        line1.add("衢州市");
+        line1.add("衢州市");
+        line1.add("衢州市");
+        line1.add("衢州市");
+        line1.add("衢州市");
+        line1.add("舟山市");
+        line1.add("舟山市");
+        line1.add("舟山市");
+        line1.add("舟山市");
+        line1.add("台州市");
+        line1.add("台州市");
+        line1.add("台州市");
+        line1.add("台州市");
+        line1.add("台州市");
+        line1.add("台州市");
+        line1.add("台州市");
+        line1.add("台州市");
+        line1.add("台州市");
+        line1.add("丽水市");
+        line1.add("丽水市");
+        line1.add("丽水市");
+        line1.add("丽水市");
+        line1.add("丽水市");
+        line1.add("丽水市");
+        line1.add("丽水市");
+        line1.add("丽水市");
+        line1.add("丽水市");
+        List<String> line2 = new ArrayList<>();
+        line2.add("上城区");
+        line2.add("拱墅区");
+        line2.add("西湖区");
+        line2.add("滨江区");
+        line2.add("萧山区");
+        line2.add("余杭区");
+        line2.add("临平区");
+        line2.add("钱塘区");
+        line2.add("富阳区");
+        line2.add("临安区");
+        line2.add("桐庐县");
+        line2.add("淳安县");
+        line2.add("建德市");
+        line2.add("海曙区");
+        line2.add("江北区");
+        line2.add("北仑区");
+        line2.add("镇海区");
+        line2.add("鄞州区");
+        line2.add("奉化区");
+        line2.add("象山县");
+        line2.add("宁海县");
+        line2.add("余姚市");
+        line2.add("慈溪市");
+        line2.add("鹿城区");
+        line2.add("龙湾区");
+        line2.add("瓯海区");
+        line2.add("洞头区");
+        line2.add("永嘉县");
+        line2.add("平阳县");
+        line2.add("苍南县");
+        line2.add("文成县");
+        line2.add("泰顺县");
+        line2.add("瑞安市");
+        line2.add("乐清市");
+        line2.add("龙港市");
+        line2.add("南湖区");
+        line2.add("秀洲区");
+        line2.add("嘉善县");
+        line2.add("海盐县");
+        line2.add("海宁市");
+        line2.add("平湖市");
+        line2.add("桐乡市");
+        line2.add("吴兴区");
+        line2.add("南浔区");
+        line2.add("德清县");
+        line2.add("长兴县");
+        line2.add("安吉县");
+        line2.add("越城区");
+        line2.add("柯桥区");
+        line2.add("上虞区");
+        line2.add("新昌县");
+        line2.add("诸暨市");
+        line2.add("嵊州市");
+        line2.add("婺城区");
+        line2.add("金东区");
+        line2.add("武义县");
+        line2.add("浦江县");
+        line2.add("磐安县");
+        line2.add("兰溪市");
+        line2.add("义乌市");
+        line2.add("东阳市");
+        line2.add("永康市");
+        line2.add("柯城区");
+        line2.add("衢江区");
+        line2.add("常山县");
+        line2.add("开化县");
+        line2.add("龙游县");
+        line2.add("江山市");
+        line2.add("定海区");
+        line2.add("普陀区");
+        line2.add("岱山县");
+        line2.add("嵊泗县");
+        line2.add("椒江区");
+        line2.add("黄岩区");
+        line2.add("路桥区");
+        line2.add("三门县");
+        line2.add("天台县");
+        line2.add("仙居县");
+        line2.add("温岭市");
+        line2.add("临海市");
+        line2.add("玉环市");
+        line2.add("莲都区");
+        line2.add("青田县");
+        line2.add("缙云县");
+        line2.add("遂昌县");
+        line2.add("松阳县");
+        line2.add("云和县");
+        line2.add("庆元县");
+        line2.add("景宁县");
+        line2.add("龙泉市");
+        data.add(line1);
+        data.add(line2);
+        return data;
+    }
+
+
+
+
+
+    private List<List<String>> head(Map<String,String> map) {
+        List<List<String>> list = new ArrayList<List<String>>();
+        List<String> head0 = new ArrayList<String>();
+        head0.add("开办企业");
+        head0.add("开办企业手续（个）（" + map.get("开办企业手续")+ "）");
+        head0.add("/");
+        List<String> head1 = new ArrayList<String>();
+        head1.add("开办企业");
+        head1.add("开办企业时间（天）（" + map.get("开办企业时间") + "）");
+        head1.add("/");
+        List<String> head2 = new ArrayList<String>();
+        head2.add("办理建筑许可");
+        head2.add("办理建筑许可手续（个）（" + map.get("办理建筑许可手续") + "）");
+        head2.add("/");
+        List<String> head3 = new ArrayList<String>();
+        head3.add("办理建筑许可");
+        head3.add("办理建筑许可时间（天）（" + map.get("办理建筑许可时间") + "）");
+        head3.add("/");
+        list.add(head0);
+        list.add(head1);
+        list.add(head2);
+        list.add(head3);
+        return list;
     }
 }
-
-
-

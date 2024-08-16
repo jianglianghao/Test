@@ -27,14 +27,14 @@ import java.util.stream.Collectors;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserEntity {
-    @Excel(name = "序号")
-    private int num;
-    @Excel(name = "姓名")
+    @Excel(name = "ip地址/邮箱/电话")
+    private String ip;
+    @Excel(name = "审核状态")
     private String name;
-    @Excel(name = "部门")
+    @Excel(name = "意见内容")
     private String dept;
-    @Excel(name = "工龄")
-    private int age;
+    @Excel(name = "答复/采纳结果")
+    private String age;
     @Excel(name = "工资")
     private int money;
 
@@ -43,7 +43,7 @@ public class UserEntity {
         ImportParams params = new ImportParams();
         params.setTitleRows(0);
         params.setHeadRows(1);
-        File file = new File("D:\\code\\Excel\\表1.xls");
+        File file = new File("/home/langchao/桌面/瑞安市人民政府关于公开征求《关于人口高质量发展十条措施（征求意见稿）》意见的公告的回复列表.xls");
 
         List<ImportParams> paramsList = new ArrayList<>();
         paramsList.add(params);
